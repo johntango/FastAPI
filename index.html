@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Name API</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        font-family: system-ui, sans-serif;
+      }
+      body {
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        margin: 0;
+        background: #eef2ff;
+        color: #172554;
+      }
+      main {
+        width: min(28rem, calc(100% - 3rem));
+        padding: 2rem;
+        border-radius: 1rem;
+        background: white;
+        box-shadow: 0 1rem 3rem rgb(30 64 175 / 15%);
+      }
+      form {
+        display: grid;
+        gap: 1rem;
+      }
+      label {
+        display: grid;
+        gap: 0.35rem;
+        font-weight: 600;
+      }
+      input,
+      button {
+        padding: 0.75rem;
+        border: 1px solid #a5b4fc;
+        border-radius: 0.5rem;
+        font: inherit;
+      }
+      .buttons {
+        display: flex;
+        gap: 0.75rem;
+      }
+      button {
+        cursor: pointer;
+        background: #4338ca;
+        color: white;
+        border: 0;
+      }
+      button.secondary {
+        background: #475569;
+      }
+      #status {
+        min-height: 1.5rem;
+      }
+      #names-list {
+        padding-left: 1.5rem;
+        margin-bottom: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Name API</h1>
+      <form id="name-form">
+        <label>
+          First name
+          <input id="firstName" name="firstName" required />
+        </label>
+        <label>
+          Surname
+          <input id="surName" name="surName" required />
+        </label>
+        <div class="buttons">
+          <button type="submit">Save name</button>
+          <button type="button" class="secondary" id="get-names">
+            Get names
+          </button>
+        </div>
+      </form>
+      <p id="status" role="status"></p>
+      <section id="names-section" hidden>
+        <h2>Saved names</h2>
+        <ol id="names-list"></ol>
+      </section>
+    </main>
+
+    <script>
+      const firstName = document.querySelector("#firstName");
+      const surName = document.querySelector("#surName");
+      const status = document.querySelector("#status");
+      const namesSection = document.querySelector("#names-section");
+      const namesList = document.querySelector("#names-list");
+
+      async function readResponse(response) {
+        const body = await response.json();
+        if (!response.ok) throw new Error(body.detail || "Request failed");
+        return body;
+      }
+
+      document
+        .querySelector("#name-form")
+        .addEventListener("submit", async (event) => {
+          event.preventDefault();
+          try {
+            const response = await fetch("/putName", {
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                firstName: firstName.value,
+                surName: surName.value,
+              }),
+            });
+            const name = await readResponse(response);
+            status.textContent = `Saved ${name.firstName} ${name.surName}`;
+          } catch (error) {
+            status.textContent = error.message;
+          }
+        });
+
+      document
+        .querySelector("#get-names")
+        .addEventListener("click", async () => {
+          try {
+            const names = await readResponse(await fetch("/getNames"));
+            namesList.replaceChildren();
+
+            if (names.length === 0) {
+              namesSection.hidden = true;
+              status.textContent = "No name has been saved yet.";
+              return;
+            }
+
+            for (const name of names) {
+              const item = document.createElement("li");
+              item.textContent = `${name.firstName} ${name.surName}`;
+              namesList.append(item);
+            }
+
+            namesSection.hidden = false;
+            status.textContent = `Loaded ${names.length} name${names.length === 1 ? "" : "s"}.`;
+          } catch (error) {
+            status.textContent = error.message;
+          }
+        });
+    </script>
+  </body>
+</html>
